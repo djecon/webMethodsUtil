@@ -1,0 +1,135 @@
+package wmUtil.util;
+import com.wm.data.*;
+import com.wm.util.Values;
+import com.wm.app.b2b.server.Service;
+import com.wm.app.b2b.server.ServiceException;
+import java.io.File;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.OperatingSystemMXBean;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
+import java.lang.management.RuntimeMXBean;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.*;
+import java.text.SimpleDateFormat;
+import com.wm.data.IData;
+import com.wm.data.IDataCursor;
+import com.wm.data.IDataUtil;
+
+public final class getOsInfo_SVC
+
+{
+
+	/** 
+	 * The primary method for the Java service
+	 *
+	 * @param pipeline
+	 *            The IData pipeline
+	 * @throws ServiceException
+	 */
+	public static final void getOsInfo(IData pipeline) throws ServiceException {
+		IDataCursor pc	 		= pipeline.getCursor(); 
+		
+		DecimalFormat df 		= new DecimalFormat("##.##%");
+		OperatingSystemMXBean osBean = ManagementFactory.getOperatingSystemMXBean();
+		MemoryMXBean memBean 	= ManagementFactory.getMemoryMXBean();
+		Runtime runtime 		= Runtime.getRuntime();
+		ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+		int peakThreadCount 	= threadBean.getPeakThreadCount();
+		List availableDrives 	= new ArrayList();
+		Double systemLoadAverage = osBean.getSystemLoadAverage() / 100; // load average for last 1 min
+		String architecture 	= osBean.getArch(); 
+		String osVersion 		= osBean.getVersion();
+		String osName 			= osBean.getName();
+		int availProcessors  	= osBean.getAvailableProcessors();
+		
+		long maxMemory 			= runtime.maxMemory();
+		long allocatedMemory 	= runtime.totalMemory();
+		long freeMemory 		= runtime.freeMemory();
+		long usedMemory 		= maxMemory - freeMemory;
+		long threadCount 		= threadBean.getThreadCount();
+		
+		RuntimeMXBean runtimeMxBean = ManagementFactory.getRuntimeMXBean();
+		Long startTime          = runtimeMxBean.getStartTime();
+		Date startDate          = new Date(startTime);
+		SimpleDateFormat df2    = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
+		String startDateText    = df2.format(startDate);
+		Long uptimeSeconds      = runtimeMxBean.getUptime() / 1000;
+		long deadlockedThreadIds[] = threadBean.findDeadlockedThreads();
+		if (deadlockedThreadIds != null) {
+			ThreadInfo[] infos 	= threadBean.getThreadInfo(deadlockedThreadIds);
+			List deadLockedThreadId = new ArrayList();
+			for (ThreadInfo info : infos) {
+				deadLockedThreadId.add(info.getThreadId());
+			}
+		}	
+		
+		boolean isCluterAware 	= com.wm.app.b2b.server.Service.isClusterAware();
+		String serverName 		= com.wm.app.b2b.server.ServerAPI.getServerName();
+		File serverConfigDir 	= com.wm.app.b2b.server.ServerAPI.getServerConfigDir();
+		String serverConfigDirString = serverConfigDir.getAbsolutePath();
+		String packageNames[] 	= com.wm.app.b2b.server.ServerAPI.getPackages();
+		String enabledPackageNames[] = com.wm.app.b2b.server.ServerAPI.getEnabledPackages();
+		String currentPort 		= String.valueOf(com.wm.app.b2b.server.ServerAPI.getCurrentPort());
+		
+		File osFile 			= new File("/");
+		long totalSpace 		= osFile.getTotalSpace(); //total disk space in bytes.
+		long usableSpace 		= osFile.getUsableSpace(); ///unallocated / free disk space in bytes.
+		long freeSpace 			= osFile.getFreeSpace(); //unallocated / free disk space in bytes.
+		String filePath 		= osFile.getAbsolutePath();
+		File[] drives 			= File.listRoots();
+		if (drives != null && drives.length > 0) {
+			for (File aDrive : drives) {
+				availableDrives.add(aDrive);
+			}
+		}
+		
+		IDataUtil.put( pc,"serverName", 	serverName);
+		IDataUtil.put( pc,"currentPort", 	currentPort);
+		IDataUtil.put( pc,"osName", osName);
+		IDataUtil.put( pc,"osVersion", osVersion);
+		IDataUtil.put( pc,"systemArchitecture", architecture);		
+		IDataUtil.put( pc,"JVMmaxMemory",  	String.valueOf(maxMemory));
+		IDataUtil.put( pc,"JVMAllocatedMemory",  String.valueOf(allocatedMemory));
+		IDataUtil.put( pc,"JVMUsedMemory",  String.valueOf(usedMemory));
+		IDataUtil.put( pc,"JVMfreeMemory",  String.valueOf(freeMemory));
+		IDataUtil.put( pc,"JVMStartDate", startDateText);
+		IDataUtil.put( pc,"JVMUptimeSeconds", Long.toString(uptimeSeconds));
+		IDataUtil.put( pc,"availProcessors", String.valueOf(availProcessors));
+		IDataUtil.put( pc,"systemLoadAverage",  df.format(systemLoadAverage));	
+		IDataUtil.put( pc,"isClusterAware", isCluterAware);
+		IDataUtil.put( pc,"packageNames", packageNames);
+		IDataUtil.put( pc,"enabledPackageNames", enabledPackageNames);
+		IDataUtil.put( pc,"peakThreadCount",  String.valueOf(peakThreadCount));
+		IDataUtil.put( pc,"currentThreadCount",  String.valueOf(threadCount));
+		IDataUtil.put( pc,"deadlockThreadIdList",  deadlockedThreadIds);
+		IDataUtil.put( pc,"filePath",  String.valueOf(filePath));
+		IDataUtil.put( pc,"totalDiskSpace",  String.valueOf(totalSpace));
+		IDataUtil.put( pc,"usableDiskSpace",  String.valueOf(usableSpace));
+		IDataUtil.put( pc,"freeDiskSpace",  String.valueOf(freeSpace));
+		IDataUtil.put( pc,"availableDrivesList",  availableDrives);
+		IDataUtil.put( pc,"javaVersion", System.getProperty("java.version"));
+		IDataUtil.put( pc,"javaVendor", System.getProperty("java.vendor"));
+		IDataUtil.put( pc,"javaHome", System.getProperty("java.home"));
+		IDataUtil.put( pc,"userDir", System.getProperty("user.dir"));
+		IDataUtil.put( pc,"serverConfigDir", serverConfigDirString);
+		pc.destroy();
+			
+	}
+	
+	// --- <<IS-BEGIN-SHARED-SOURCE-AREA>> ---
+	
+	
+	
+	// --- <<IS-END-SHARED-SOURCE-AREA>> ---
+
+	final static getOsInfo_SVC _instance = new getOsInfo_SVC();
+
+	static getOsInfo_SVC _newInstance() { return new getOsInfo_SVC(); }
+
+	static getOsInfo_SVC _cast(Object o) { return (getOsInfo_SVC)o; }
+
+}
