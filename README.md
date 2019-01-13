@@ -11,3 +11,4 @@ peakThreadCount
 totalDiskSpace
 freeDiskSpace
 
+ConvertStatsLogs.java will convert hex to decimal values in IS stats.log files. 
