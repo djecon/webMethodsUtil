@@ -1,3 +1,6 @@
+// webMethods Integration Server stats.log file - convert hex values to decimal. 
+// Date Written: Jan 2018. 
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
