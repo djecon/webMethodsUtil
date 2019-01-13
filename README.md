@@ -11,4 +11,8 @@ peakThreadCount
 totalDiskSpace
 freeDiskSpace
 
-ConvertStatsLogs.java will convert hex to decimal values in IS stats.log files. 
+ConvertStatsLogs.java will convert webMethods Integration Server stats.log hex to decimal values. To run, download the java code, compile (javac ConvertStatsLogs.java) and then run (java ConvertStatsLogs). Command line switches are as follows:
+-i "input file name" (required, usually stats.log etc)
+-o "output file name" (optional, if not provided, the input file name will be used and suffixed with .out)
+
+
